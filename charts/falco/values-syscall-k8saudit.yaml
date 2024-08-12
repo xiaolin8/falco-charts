@@ -22,10 +22,10 @@ falcoctl:
   artifact:
     install:
       # -- Enable the init container.
-      enabled: true
+      enabled: false
     follow:
       # -- Enable the sidecar container.
-      enabled: true
+      enabled: false
   config:
     artifact:
       install:
@@ -44,7 +44,7 @@ services:
         protocol: TCP
 
 falco:
-  rules_files:
+  rules_file:
     - /etc/falco/falco_rules.yaml
     - /etc/falco/k8s_audit_rules.yaml
     - /etc/falco/rules.d

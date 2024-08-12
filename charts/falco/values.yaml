@@ -6,9 +6,9 @@
 
 image:
   # -- The image pull policy.
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # -- The image registry to pull from.
-  registry: docker.io
+  registry: 10.56.184.75:8000
   # -- The image repository to pull from
   repository: falcosecurity/falco-no-driver
   # -- The image tag to pull. Overrides the image tag whose default is the chart appVersion.
@@ -127,7 +127,7 @@ healthChecks:
 
 # -- Attach the Falco process to a tty inside the container. Needed to flush Falco logs as soon as they are emitted.
 # Set it to "true" when you need the Falco logs to be immediately displayed.
-tty: false
+tty: true
 
 #########################
 # Scenario requirements #
@@ -274,7 +274,7 @@ driver:
   # Always set it to false when using Falco with plugins.
   enabled: true
   # -- kind tells Falco which driver to use. Available options: kmod (kernel driver), ebpf (eBPF probe), modern_ebpf (modern eBPF probe).
-  kind: auto
+  kind: kmod
   # -- kmod holds the configuration for the kernel module.
   kmod:
     # -- bufSizePreset determines the size of the shared space between Falco and its drivers.
@@ -337,7 +337,7 @@ driver:
         # -- The image pull policy.
         pullPolicy: IfNotPresent
         # -- The image registry to pull from.
-        registry: docker.io
+        registry: 10.56.184.75:8000
         # -- The image repository to pull from.
         repository: falcosecurity/falco-driver-loader
         #  -- Overrides the image tag whose default is the chart appVersion.
@@ -385,7 +385,7 @@ collectors:
     # https://github.com/falcosecurity/charts/tree/master/charts/k8s-metacollector
     # When this option is disabled, Falco falls back to the container annotations to grab the metadata.
     # In such a case, only the ID, name, namespace, labels of the pod will be available.
-    enabled: false
+    enabled: true
     # --pluginRef is the OCI reference for the k8smeta plugin. It could be a full reference such as:
     # "ghcr.io/falcosecurity/plugins/plugin/k8smeta:0.1.0". Or just name + tag: k8smeta:0.1.0.
     pluginRef: "ghcr.io/falcosecurity/plugins/plugin/k8smeta:0.2.0"
@@ -393,7 +393,7 @@ collectors:
     # k8s-metacollector service. e.x: falco-k8smetacollecto.falco.svc. If for any reason you need to override
     # it, make sure to set here the address of the k8s-metacollector.
     # It is used by the k8smeta plugin to connect to the k8s-metacollector.
-    collectorHostname: ""
+    collectorHostname: "falco-k8s-metacollector.falco.svc"
     # -- collectorPort designates the port on which the k8s-metacollector gRPC service listens. If not specified
     # the value of the port named `broker-grpc` in k8s-metacollector.service.ports is used. The default values is 45000.
     # It is used by the k8smeta plugin to connect to the k8s-metacollector.
@@ -435,16 +435,15 @@ certs:
 
 # -- Third party rules enabled for Falco. More info on the dedicated section in README.md file.
 customRules:
-  {}
-  # Although Falco comes with a nice default rule set for detecting weird
-  # behavior in containers, our users are going to customize the run-time
-  # security rule sets or policies for the specific container images and
-  # applications they run. This feature can be handled in this section.
-  #
-  # Example:
-  #
-  # rules-traefik.yaml: |-
-  #   [ rule body ]
+  custom-rules.yaml: |-
+    - rule: Write below etc
+      desc: An attempt to write to /etc directory
+      condition: >
+        (evt.type in (open,openat,openat2) and evt.is_open_write=true and fd.typechar='f' and fd.num>=0)
+        and fd.name startswith /etc
+      output: "File below /etc opened for writing (file=%fd.name pcmdline=%proc.pcmdline gparent=%proc.aname[2] ggparent=%proc.aname[3] gggparent=%proc.aname[4] evt_type=%evt.type user=%user.name user_uid=%user.uid user_loginuid=%user.loginuid process=%proc.name proc_exepath=%proc.exepath parent=%proc.pname command=%proc.cmdline terminal=%proc.tty %container.info)"
+      priority: WARNING
+      tags: [filesystem, mitre_persistence]    
 
 ########################
 # Falco integrations   #
@@ -453,11 +452,41 @@ customRules:
 # -- For configuration values, see https://github.com/falcosecurity/charts/blob/master/charts/falcosidekick/values.yaml
 falcosidekick:
   # -- Enable falcosidekick deployment.
-  enabled: false
+  enabled: true
   # -- Enable usage of full FQDN of falcosidekick service (useful when a Proxy is used).
   fullfqdn: false
   # -- Listen port. Default value: 2801
   listenPort: ""
+  config:
+    elasticsearch:
+      # -- Elasticsearch <http://host:port>, if not `empty`, Elasticsearch is *enabled*
+      hostport: "http://10.57.0.97:9200"
+      # -- Elasticsearch index
+      index: "falco"
+      # -- Elasticsearch document type
+      type: "_doc"
+      # date suffix for index rotation : daily, monthly, annually, none
+      suffix: "daily"
+      # -- use this username to authenticate to Elasticsearch if the username is not empty
+      username: "elastic"
+      # -- use this password to authenticate to Elasticsearch if the password is not empty
+      password: "Paas@sittest03"
+      # -- Replace . by _ to avoid mapping conflicts, force to true if createindextemplate==true (default: false)
+      flattenfields: false
+      # -- Create an index template (default: false)
+      createindextemplate: false
+      # -- Number of shards set by the index template (default: 3)
+      numberofshards: 3
+      # -- Number of replicas set by the index template (default: 3)
+      numberofreplicas: 1
+      # -- a list of comma separated custom headers to add, syntax is "key:value,key:value"
+      customheaders: ""
+      # -- if true, checkcert flag will be ignored (server cert will always be checked)
+      mutualtls: false
+      # -- check if ssl certificate of the output is valid
+      checkcert: false
+      # -- minimum priority of event to use this output, order is `emergency\|alert\|critical\|error\|warning\|notice\|informational\|debug or ""`
+      minimumpriority: ""
 
 ####################
 # falcoctl config  #
@@ -467,7 +496,7 @@ falcoctl:
     # -- The image pull policy.
     pullPolicy: IfNotPresent
     # -- The image registry to pull from.
-    registry: docker.io
+    registry: 10.56.184.75:8000
     # -- The image repository to pull from.
     repository: falcosecurity/falcoctl
     # -- The image tag to pull.
@@ -476,7 +505,7 @@ falcoctl:
     # -- Runs "falcoctl artifact install" command as an init container. It is used to install artfacts before
     # Falco starts. It provides them to Falco by using an emptyDir volume.
     install:
-      enabled: true
+      enabled: false
       # -- Extra environment variables that will be pass onto falcoctl-artifact-install init container.
       env: []
       # -- Arguments to pass to the falcoctl-artifact-install init container.
@@ -494,7 +523,7 @@ falcoctl:
     # correct folder by falcoctl. To prevent new versions of artifacts from breaking Falco, the tool checks if it is compatible
     # with the running version of Falco before installing it.
     follow:
-      enabled: true
+      enabled: false
       # -- Extra environment variables that will be pass onto falcoctl-artifact-follow sidecar container.
       env: []
       # -- Arguments to pass to the falcoctl-artifact-follow sidecar container.
@@ -624,6 +653,7 @@ falco:
   rules_files:
     - /etc/falco/falco_rules.yaml
     - /etc/falco/falco_rules.local.yaml
+    - /etc/falco/k8s_audit_rules.yaml
     - /etc/falco/rules.d
 
   # [Incubating] `rules`
@@ -738,7 +768,7 @@ falco:
   # -- Add here all plugins and their configuration. Please
   # consult the plugins documentation for more info. Remember to add the plugins name in
   # "load_plugins: []" in order to load them in Falco.
-  load_plugins: []
+  load_plugins: [k8smeta, k8saudit, json]
 
   # -- Customize subsettings for each enabled plugin. These settings will only be
   # applied when the corresponding plugin is enabled using the `load_plugins`
@@ -758,7 +788,13 @@ falco:
     - name: json
       library_path: libjson.so
       init_config: ""
-
+    - name: k8smeta
+      library_path: libk8smeta.so
+      init_config:
+        collectorPort: 45000
+        collectorHostname: falco-k8s-metacollector.falco.svc
+        nodeName: HW_FALCO
+        hostProc: /host
   ######################
   # Falco config files #
   ######################
@@ -814,7 +850,7 @@ falco:
   # -- When enabled, Falco will output alert messages and rules file
   # loading/validation results in JSON format, making it easier for downstream
   # programs to process and consume the data. By default, this option is disabled.
-  json_output: false
+  json_output: true
 
   # [Stable] `json_include_output_property`
   #
@@ -863,7 +899,7 @@ falco:
   #
   # With the default settings, the throttling mechanism is disabled.
   outputs:
-    rate: 0
+    rate: 1
     max_burst: 1000
 
   ##########################
@@ -962,7 +998,7 @@ falco:
   # output events in memory until they are consumed by a gRPC client. Ensure that
   # you have a consumer for the output events or leave it disabled.
   grpc_output:
-    enabled: false
+    enabled: true
 
   ##########################
   # Falco exposed services #
@@ -1003,7 +1039,7 @@ falco:
 
   # -- gRPC server using a local unix socket
   grpc:
-    enabled: false
+    enabled: true
     bind_address: "unix:///run/falco/falco.sock"
     # -- When the `threadiness` value is set to 0, Falco will automatically determine
     # the appropriate number of threads based on the number of online cores in the system.
@@ -1194,7 +1230,7 @@ falco:
     # -- Rate at which log/alert messages are emitted.
     rate: .03333
     # -- Max burst of messages emitted.
-    max_burst: 1
+    max_burst: 10
     # -- Flag to enable drops for debug purposes.
     simulate_drops: false
 
