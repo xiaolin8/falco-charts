@@ -102,11 +102,11 @@ nodeSelector: {}
 affinity: {}
 
 # -- Tolerations to allow Falco to run on Kubernetes masters.
-tolerations:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/master
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/control-plane
+#tolerations:
+#  - effect: NoSchedule
+#    key: node-role.kubernetes.io/master
+#  - effect: NoSchedule
+#    key: node-role.kubernetes.io/control-plane
 
 # -- Parameters used
 healthChecks:
