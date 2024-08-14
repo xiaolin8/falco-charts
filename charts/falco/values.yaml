@@ -457,6 +457,18 @@ falcosidekick:
   fullfqdn: false
   # -- Listen port. Default value: 2801
   listenPort: ""
+
+  webui:
+    service:
+      # -- The web UI service type
+      type: LoadBalancer
+      # -- The web UI service port for the falcosidekick-ui
+      port: 8802
+      # -- The web UI service annotations (use this to set a internal LB, for example.)
+      annotations:
+        kubernetes.io/elb.id: lb-d4cz6o7pnkuw
+        service.beta.kubernetes.io/loadbalancer-id: lb-d4cz6o7pnkuw
+
   config:
     elasticsearch:
       # -- Elasticsearch <http://host:port>, if not `empty`, Elasticsearch is *enabled*
