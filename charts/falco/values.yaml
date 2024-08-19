@@ -523,7 +523,7 @@ falcosidekick:
   config:
     elasticsearch:
       # -- Elasticsearch <http://host:port>, if not `empty`, Elasticsearch is *enabled*
-      hostport: "http://10.57.0.97:9200"
+      hostport: ""
       # -- Elasticsearch index
       index: "falco"
       # -- Elasticsearch document type
