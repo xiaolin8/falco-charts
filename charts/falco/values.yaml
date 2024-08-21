@@ -12,7 +12,7 @@ image:
   # -- The image repository to pull from
   repository: falcosecurity/falco-no-driver
   # -- The image tag to pull. Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "0.38.1"
 
 # -- Secrets containing credentials when pulling from private/secure registries.
 imagePullSecrets: []
@@ -80,7 +80,7 @@ containerSecurityContext: {}
 
 scc:
   # -- Create OpenShift's Security Context Constraint.
-  create: true
+  create: false
 
 resources:
   # -- Although resources needed are subjective on the actual workload we provide
